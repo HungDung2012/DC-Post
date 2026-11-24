@@ -1,6 +1,8 @@
 # PROJECT SPECIFICATION
 # CUSTOMER SERVICE — SHIPMENT MANAGEMENT SYSTEM
 
+> Cập nhật môi trường ngày 24/11/2026 theo yêu cầu chủ dự án: phát triển và kiểm thử cục bộ chạy Java/Maven, Vite và MySQL cài trực tiếp, không sử dụng Docker do giới hạn bộ nhớ. Các mục Docker/Compose bên dưới được giữ làm tham chiếu đóng gói, không phải điều kiện để code hoặc test. Các quyết định nghiệp vụ và MySQL vẫn giữ nguyên.
+
 ## 1. Tổng quan dự án
 
 ### 1.1. Giới thiệu

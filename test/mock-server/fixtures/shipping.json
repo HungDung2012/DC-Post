@@ -1,0 +1,12 @@
+{
+  "submission":{"outcome":"CONFIRMED"},
+  "lookup":{"status":"FOUND"},
+  "cancellation":{"outcome":"CONFIRMED"},
+  "tracking":{
+    "trackingCode":"DCDEVELOPMENT",
+    "sourceStatus":"DEVELOPMENT_STATUS",
+    "updatedAt":"2026-11-24T00:00:00Z",
+    "publicEvents":[{"sourceStatus":"DEVELOPMENT_STATUS","occurredAt":"2026-11-24T00:00:00Z","area":"Development area"}],
+    "privateDetails":{"recipientName":"Development recipient","recipientPhone":"0900000000","recipientAddress":"Development address"}
+  }
+}

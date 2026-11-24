@@ -14,6 +14,7 @@
   <properties>
     <java.version>21</java.version>
     <flyway.version>11.20.3</flyway.version>
+    <test.jvm.args>-Xms16m -Xmx256m -XX:+UseSerialGC -XX:ActiveProcessorCount=2 -XX:ReservedCodeCacheSize=48m -Xss512k</test.jvm.args>
   </properties>
   <dependencies>
     <dependency>
@@ -41,7 +42,7 @@
         <configuration>
           <includes><include>**/*Test.java</include></includes>
           <failIfNoTests>true</failIfNoTests>
-          <argLine>-javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar -Xshare:off</argLine>
+          <argLine>${test.jvm.args} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar -Xshare:off</argLine>
           <environmentVariables><DEBUG>false</DEBUG></environmentVariables>
         </configuration>
       </plugin>
@@ -58,7 +59,7 @@
             <configuration>
               <includes><include>**/*IT.java</include></includes>
               <failIfNoTests>true</failIfNoTests>
-              <argLine>-javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar -Xshare:off</argLine>
+              <argLine>${test.jvm.args} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar -Xshare:off</argLine>
               <environmentVariables><DEBUG>false</DEBUG></environmentVariables>
             </configuration>
             <executions>

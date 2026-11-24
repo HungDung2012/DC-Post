@@ -16,9 +16,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class IdentitySchemaIT {
-    private static final String URL = "jdbc:mysql://localhost:3307/customer_test?connectionTimeZone=UTC";
-    private static final String USER = "customer_test";
-    private static final String PASSWORD = "customer-test-local-only";
+    private static final String URL = System.getenv().getOrDefault("TEST_DB_URL",
+            "jdbc:mysql://localhost:3306/customer_test?connectionTimeZone=UTC");
+    private static final String USER = System.getenv().getOrDefault("TEST_DB_USERNAME", "customer_test");
+    private static final String PASSWORD = System.getenv().getOrDefault("TEST_DB_PASSWORD", "customer-test-local-only");
 
     @BeforeAll
     static void migrate() {
@@ -31,7 +32,7 @@ class IdentitySchemaIT {
     void Test_migrate_001() throws Exception {
         Set<String> tables = new HashSet<>();
         try (Connection connection = DriverManager.getConnection(URL, USER, PASSWORD);
-             ResultSet result = connection.getMetaData().getTables("customer_test", null, "%", new String[]{"TABLE"})) {
+             ResultSet result = connection.getMetaData().getTables(connection.getCatalog(), null, "%", new String[]{"TABLE"})) {
             while (result.next()) {
                 tables.add(result.getString("TABLE_NAME"));
             }
@@ -45,7 +46,7 @@ class IdentitySchemaIT {
     void Test_migrate_002() throws Exception {
         Set<String> uniqueColumns = new HashSet<>();
         try (Connection connection = DriverManager.getConnection(URL, USER, PASSWORD);
-             ResultSet result = connection.getMetaData().getIndexInfo("customer_test", null, "users", true, false)) {
+             ResultSet result = connection.getMetaData().getIndexInfo(connection.getCatalog(), null, "users", true, false)) {
             while (result.next()) {
                 uniqueColumns.add(result.getString("COLUMN_NAME"));
             }
@@ -59,7 +60,7 @@ class IdentitySchemaIT {
     void Test_migrate_003() throws Exception {
         Set<String> primaryKey = new HashSet<>();
         try (Connection connection = DriverManager.getConnection(URL, USER, PASSWORD);
-             ResultSet result = connection.getMetaData().getPrimaryKeys("customer_test", null, "user_roles")) {
+             ResultSet result = connection.getMetaData().getPrimaryKeys(connection.getCatalog(), null, "user_roles")) {
             while (result.next()) {
                 primaryKey.add(result.getString("COLUMN_NAME"));
             }
@@ -88,9 +89,9 @@ class IdentitySchemaIT {
     void Test_migrate_005() throws Exception {
         Set<String> referencedTables = new HashSet<>();
         try (Connection connection = DriverManager.getConnection(URL, USER, PASSWORD);
-             ResultSet result = connection.getMetaData().getImportedKeys("customer_test", null, "user_roles")) {
+             ResultSet result = connection.getMetaData().getImportedKeys(connection.getCatalog(), null, "user_roles")) {
             while (result.next()) {
-                assertEquals("customer_test", result.getString("PKTABLE_CAT"));
+                assertEquals(connection.getCatalog(), result.getString("PKTABLE_CAT"));
                 referencedTables.add(result.getString("PKTABLE_NAME"));
             }
         }

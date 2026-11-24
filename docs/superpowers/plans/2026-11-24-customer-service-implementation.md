@@ -6,13 +6,15 @@
 
 **Architecture:** React gọi Spring Boot; Backend dùng MySQL riêng và Interface/HTTP Adapter cho dependency ngoài. Scheduler đọc trạng thái trực tiếp trên bảng nghiệp vụ; không thêm bảng hàng đợi. Không giữ database transaction trong thời gian HTTP và không coi timeout là thất bại chắc chắn.
 
-**Tech Stack:** Java 21, Spring Boot, Maven, MySQL, Flyway, Spring Security/JWT, RestClient; React/TypeScript/Vite/Tailwind/shadcn/ui, React Router, TanStack Query, React Hook Form/Zod, Axios, Recharts, Lucide; JUnit 5/Mockito chỉ trong `test/backend`; Docker Compose, VNPay Sandbox.
+**Tech Stack:** Java 21, Spring Boot, Maven, MySQL cài trực tiếp, Flyway, Spring Security/JWT, RestClient; React/TypeScript/Vite/Tailwind/shadcn/ui, React Router, TanStack Query, React Hook Form/Zod, Axios, Recharts, Lucide; JUnit 5/Mockito chỉ trong `test/backend`; VNPay Sandbox. Docker/Compose chỉ giữ tham chiếu đóng gói.
 
 ---
 
 ## 1. Trạng thái, giới hạn và thứ tự thực hiện
 
-Ngày lập: 24/11/2026. Design và implementation plan đã được chủ dự án duyệt; đang triển khai. Tasks 01–09 đã được kiểm thử và review; Tasks 10–34 chưa triển khai. Bằng chứng tại `docs/verification/2026-11-24-identity-checkpoint.md`. Các snippet dưới đây là hướng dẫn, không thay thế source và báo cáo kiểm thử thực tế.
+**Cập nhật bắt buộc ngày 24/11/2026:** Chủ dự án yêu cầu bỏ Docker khi code/test vì máy thiếu bộ nhớ. Không tự chạy Docker, build image hoặc khởi động container. Backend chạy trực tiếp bằng Java/Maven; Frontend bằng Vite; dùng MySQL đã cài trên máy. `mvn test` chỉ chạy test nghiệp vụ/HTTP không cần database; profile `integration` chạy riêng khi MySQL test cục bộ đã cấu hình. Maven và JVM test giới hạn heap 256 MB, 2 CPU; thực hiện tuần tự. Các bằng chứng Docker ở checkpoint trước chỉ là lịch sử, không phải hướng dẫn tiếp tục.
+
+Ngày lập: 24/11/2026. Design và implementation plan đã được chủ dự án duyệt; đang triển khai. Tasks 01–10 đã được triển khai và review; Tasks 11–34 chưa triển khai. Task 10 và quy trình Java cục bộ được xác minh bằng 63 test không cần database; chưa chạy lại test MySQL trên môi trường cục bộ mới. Bằng chứng tại `docs/verification/2026-11-24-identity-checkpoint.md` và `docs/verification/2026-11-24-development-adapters.md`. Các snippet dưới đây là hướng dẫn, không thay thế source và báo cáo kiểm thử thực tế.
 
 Nguồn: `PROJECT_SPEC.md` và `docs/superpowers/specs/2026-11-24-customer-service-design.md`. Không thay đổi nghiệp vụ đã thống nhất. Không thêm bảng, role, service hoặc framework kiểm thử Frontend.
 
@@ -65,8 +67,8 @@ mvn -f test/backend/pom.xml '-Dtest=RegistrationServiceTest' test
 mvn -f test/backend/pom.xml test
 mvn -f test/backend/pom.xml verify -Pintegration
 
-# Chỉ khởi động database test, không dùng development DB.
-docker compose -f test/compose.yml up -d mysql-test
+# Test database dùng MySQL cài trực tiếp, database customer_test, khác customer_dev.
+# Chỉ chạy verify -Pintegration khi TEST_DB_URL/TEST_DB_USERNAME/TEST_DB_PASSWORD đã đúng.
 
 # Frontend: kiểm tra TypeScript và build, không thêm frontend test runner.
 npm.cmd --prefix customer-web run typecheck
@@ -75,7 +77,7 @@ npm.cmd --prefix customer-web run build
 
 Sau mọi thay đổi source Backend phải install lại artifact trước khi chạy module test; không chạy test dựa trên JAR cũ. Khi RED cần API chưa tồn tại, tạo signature cần cho nghiệp vụ với implementation tối thiểu chưa đáp ứng hành vi, install artifact rồi chạy test để quan sát assertion thất bại; lỗi compile/setup không được ghi là RED đã đạt. Không thêm test-only API vào source chính.
 
-Unit test `*Test` chạy bằng Surefire; integration test `*IT` chạy bằng Failsafe trong profile `integration` chỉ ở test/backend. Unit test không được tự kết nối database. Mọi method test có Javadoc và tên `Test_<methodName>_001`, `_002` theo từng method được kiểm thử. Các snippet test sau là phần thân đặt trong class tại đường dẫn đã ghi, với dependency do task đó tạo; phải thêm imports/package đúng khi triển khai.
+Test nghiệp vụ/HTTP `*Test` chạy bằng Surefire trên JVM, không cần database hoặc Docker; `DevelopmentAdapterTest` tự bật HTTP server cổng ngẫu nhiên. Test MySQL `*IT` chạy bằng Failsafe trong profile `integration` chỉ ở test/backend. Không tự khởi động database hoặc Docker. Mọi method test có Javadoc và tên `Test_<methodName>_001`, `_002` theo từng method được kiểm thử. Các snippet test sau là phần thân đặt trong class tại đường dẫn đã ghi, với dependency do task đó tạo; phải thêm imports/package đúng khi triển khai.
 
 Mỗi task Backend thực hiện: test mới → chạy thấy đúng failure → minimal implementation → install lại → test pass → refactor nếu cần → chạy lại → review diff → commit nếu quyền cho phép. Chưa chạy thì không ghi pass.
 
@@ -260,12 +262,12 @@ Ghi chú triển khai: dùng JPA ManyToMany/JoinTable cho user_roles, giữ nguy
 
 **Files:** Create `customer-service/src/main/java/com/dcpost/customer/integration/pricing/PricingClient.java`, `customer-service/src/main/java/com/dcpost/customer/integration/warehouse/WarehouseClient.java`, `customer-service/src/main/java/com/dcpost/customer/integration/shipping/ShippingClient.java`, `customer-service/src/main/java/com/dcpost/customer/integration/config/IntegrationProperties.java`, `customer-service/src/main/java/com/dcpost/customer/integration/common/IntegrationException.java`, `test/mock-server/server.py`, `test/mock-server/README.md`, `test/mock-server/fixtures/pricing.json`, `test/mock-server/fixtures/warehouse.json`, `test/mock-server/fixtures/shipping.json`.
 
-- [ ] Ghi các chữ ký ở mục 4 và tạo DTO nội bộ trong package `dto` tương ứng: FeeRequest/FeeQuote, DropOffLocation, ShipmentSubmission/SubmissionResult/SubmissionLookup/CancellationResult/ShipmentTracking. Không có wire annotation gắn service Go.
-- [ ] `FeeQuote` chứa amount VND và thời điểm nhận; shipment tracking tách public event khỏi private data. IntegrationException phân loại connect/read timeout, unavailable, invalid response, unauthorized và unknown outcome.
-- [ ] Viết HTTP mock server dùng thư viện chuẩn Python, đọc fixture trong test/, có tình huống thành công/timeout/invalid JSON/duplicate; không tạo mock class ở ứng dụng. Route mô phỏng được ghi rõ chỉ là giao thức tạm phục vụ development.
-- [ ] Thêm lệnh chạy mock server trong test/mock-server/README.md và endpoint env của app. Không tự fallback khi mock hoặc API thật lỗi.
-- [ ] Tạo HTTP Adapter thực tế tại `customer-service/src/main/java/com/dcpost/customer/integration/pricing/PricingHttpAdapter.java`, `customer-service/src/main/java/com/dcpost/customer/integration/warehouse/WarehouseHttpAdapter.java`, `customer-service/src/main/java/com/dcpost/customer/integration/shipping/ShippingHttpAdapter.java` để ứng dụng development có đủ bean. Giao thức HTTP tạm chỉ dùng với mock server; endpoint lấy từ cấu hình, không fake response trong adapter. Test mapping/timeout tại `test/backend/src/test/java/com/dcpost/customer/integration/DevelopmentAdapterIT.java` theo TDD trước khi thêm xử lý HTTP; Task 32 cập nhật sang contract thật.
-- [ ] Kiểm tra bằng `python test/mock-server/server.py --help`, sau đó HTTP request tới mock bằng `Invoke-WebRequest`; lệnh này chỉ kiểm tra mock server, không xác nhận API Go. Commit `test: define isolated development integration mocks`.
+- [x] Ghi các chữ ký ở mục 4 và tạo DTO nội bộ trong package `dto` tương ứng: FeeRequest/FeeQuote, DropOffLocation, ShipmentSubmission/SubmissionResult/SubmissionLookup/CancellationResult/ShipmentTracking. Không có wire annotation gắn service Go.
+- [x] `FeeQuote` chứa amount VND và thời điểm nhận; shipment tracking tách public event khỏi private data. IntegrationException phân loại connect/read timeout, unavailable, invalid response, unauthorized và unknown outcome.
+- [x] Viết HTTP mock server dùng thư viện chuẩn Python, đọc fixture trong test/, có tình huống thành công/timeout/invalid JSON/duplicate; không tạo mock class ở ứng dụng. Route mô phỏng được ghi rõ chỉ là giao thức tạm phục vụ development.
+- [x] Thêm lệnh chạy mock server trong test/mock-server/README.md và endpoint env của app. Không tự fallback khi mock hoặc API thật lỗi.
+- [x] Tạo HTTP Adapter thực tế tại `customer-service/src/main/java/com/dcpost/customer/integration/pricing/PricingHttpAdapter.java`, `customer-service/src/main/java/com/dcpost/customer/integration/warehouse/WarehouseHttpAdapter.java`, `customer-service/src/main/java/com/dcpost/customer/integration/shipping/ShippingHttpAdapter.java` để ứng dụng development có đủ bean. Giao thức HTTP tạm chỉ dùng với mock server; endpoint lấy từ cấu hình, không fake response trong adapter. Test mapping/timeout tại `test/backend/src/test/java/com/dcpost/customer/integration/DevelopmentAdapterTest.java` theo TDD trước khi thêm xử lý HTTP; Task 32 cập nhật sang contract thật. Tên Test thay IT để chạy mặc định trên JVM theo yêu cầu bỏ Docker; không cần database.
+- [x] Kiểm tra bằng `python test/mock-server/server.py --help`, sau đó HTTP request tới mock bằng `Invoke-WebRequest`; lệnh này chỉ kiểm tra mock server, không xác nhận API Go. Commit `test: define isolated development integration mocks`.
 
 **Nghiệm thu:** source chính không chứa fake data/mock bean; không có tài liệu nào gọi route mô phỏng là contract đã chốt.
 
@@ -525,12 +527,12 @@ WHERE shipment_id = :id AND sync_status = 'PENDING'
 - [ ] Review source không giữ transaction qua HTTP, không mock fallback và không cập nhật trạng thái vận chuyển chính thức.
 - [ ] Sửa lỗi bằng TDD Backend, chạy lại đúng ca liên quan; chỉ mở rộng suite khi thay đổi cần. Commit `docs: record sandbox and security verification`.
 
-## Task 34: README, Compose và nghiệm thu cuối
+## Task 34: README, chạy cục bộ và nghiệm thu cuối
 
 **Files:** Modify `README.md`, `.env.example`, `docker-compose.yml`, `test/README.md`; Create `docs/verification/final-acceptance.md`.
 
 - [ ] README mô tả JDK 21, env, DB dev/test riêng, build/install trước test, mock server độc lập, ports và URL web/OpenAPI; không yêu cầu sửa source để chạy test.
-- [ ] Chạy lại từ hướng dẫn bằng Compose, không dùng `down -v` hoặc xóa dữ liệu hiện có. Kiểm tra health/startup và ứng dụng sau restart vẫn còn đơn/trạng thái đối soát.
+- [ ] Chạy lại từ hướng dẫn bằng Java, Vite và MySQL cục bộ, không khởi động Docker hoặc xóa dữ liệu hiện có. Kiểm tra health/startup và ứng dụng sau restart vẫn còn đơn/trạng thái đối soát.
 - [ ] Chạy build/install Backend, unit suite, integration suite và Frontend typecheck/build. Kiểm tra lệnh thoát 0 và nội dung báo cáo; không coi suite không có test là pass.
 - [ ] Điền checklist 9 scenario, phân biệt môi trường mock/service thật/Sandbox và mọi dependency chưa có. Không ghi dự án hoàn tất nếu yêu cầu bắt buộc còn chưa nghiệm thu.
 - [ ] Review diff cuối, bảo đảm chỉ 7 bảng nghiệp vụ (Flyway metadata không phải bảng nghiệp vụ); không test framework Frontend, không class/resource test trong artifact deploy.
@@ -593,7 +595,7 @@ Luôn chạy `mvn -f customer-service/pom.xml install` sau lần sửa Backend g
 | 07 | `mvn -f test/backend/pom.xml '-Dtest=AuthServiceTest,JwtTokenServiceTest' test` |
 | 08 | `mvn -f test/backend/pom.xml verify -Pintegration '-Dit.test=SecurityBoundaryIT'` và `mvn -f test/backend/pom.xml '-Dtest=RequestRateLimiterTest' test` |
 | 09 | `mvn -f test/backend/pom.xml '-Dtest=ProfileServiceTest' test` |
-| 10 | `mvn -f test/backend/pom.xml verify -Pintegration '-Dit.test=DevelopmentAdapterIT'` |
+| 10 | `mvn -f test/backend/pom.xml test '-Dtest=DevelopmentAdapterTest'` (không cần Docker/MySQL) |
 | 11 | `mvn -f test/backend/pom.xml verify -Pintegration '-Dit.test=ShipmentSchemaIT'` và `mvn -f test/backend/pom.xml '-Dtest=TrackingCodeGeneratorTest' test` |
 | 12 | `mvn -f test/backend/pom.xml verify -Pintegration '-Dit.test=ShipmentIdempotencyIT'` và `mvn -f test/backend/pom.xml '-Dtest=ShipmentCreationServiceTest' test` |
 | 13 | `mvn -f test/backend/pom.xml verify -Pintegration '-Dit.test=CounterShipmentIT'` |

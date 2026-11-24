@@ -174,7 +174,7 @@ Source ứng dụng chỉ chứa interface nghiệp vụ và HTTP Adapter thực
 
 Test mock/stub/fake và HTTP mock server development đều nằm trong `test/`. Ứng dụng gọi mock server qua endpoint configuration thông thường, không có mock profile, test bean hoặc nhánh fallback trong source chính. HTTP mô phỏng được ghi nhãn là tạm thời; chỉ thay mapping adapter khi contract thật được duyệt.
 
-Docker Compose phục vụ Backend, Frontend và MySQL development; dữ liệu MySQL test chạy độc lập qua cấu hình trong `test/`. Không chia sẻ database test với development. Secret dùng biến môi trường; `.env.example` chỉ có placeholder tên biến. Các port/origin và phiên bản dependency được chốt trong plan setup dựa trên ma trận tương thích Java 21/Spring Boot/Springdoc và React/Vite/Tailwind; không đổi stack.
+Cập nhật ngày 24/11/2026 theo yêu cầu chủ dự án: chạy Backend bằng Java/Maven, Frontend bằng Vite và MySQL cài trực tiếp; không sử dụng Docker để phát triển hoặc kiểm thử trên máy hiện tại do giới hạn bộ nhớ. Các file Compose/Dockerfile đã có chỉ được giữ để tham chiếu đóng gói. Database test và development tách riêng, có thể cùng một MySQL server cục bộ. Secret dùng biến môi trường; `.env.example` chỉ có placeholder. Maven và JVM kiểm thử giới hạn heap 256 MB, 2 CPU; chạy các lệnh build/test lần lượt.
 
 ## 12. TDD, review và verification
 
@@ -182,7 +182,7 @@ Backend TDD theo RED → GREEN → REFACTOR cho nghiệp vụ quan trọng. Test
 
 Backend xuất artifact JAR thông thường cho module test phụ thuộc và executable JAR riêng để chạy/deploy. Điều này phục vụ đóng gói/dependency, không thêm test hook hoặc dependency test vào ứng dụng. Build/install Backend trước, chạy test module bằng lệnh riêng.
 
-Unit test dùng JUnit 5/Mockito chỉ trong module test. Integration test dùng MySQL riêng do Docker Compose trong `test/` khởi động độc lập; không thêm Testcontainers hoặc framework test Frontend.
+Unit test dùng JUnit 5/Mockito chỉ trong module test. Test nghiệp vụ và HTTP adapter chạy trên JVM, không cần database hoặc Docker. Test persistence/security HTTP cần MySQL riêng được chọn bằng profile `integration` với TEST_DB_URL/TEST_DB_USERNAME/TEST_DB_PASSWORD; không tự khởi chạy database. Không thêm Testcontainers hoặc framework test Frontend.
 
 Các ca trọng tâm: quyền sở hữu; phí bị sửa; idempotency cùng/khác payload; concurrent tạo đơn/payment/hủy; scheduler restart/timeout; giành quyền đồng thời; callback trùng/sai chữ ký/sai tiền; chặn thanh toán lại khi chưa rõ; PAID sau hủy; hủy local và external; refund timeout và không gửi trùng. Kiểm tra artifact/image không chứa tài nguyên test.
 
