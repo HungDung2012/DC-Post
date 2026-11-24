@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: customer-service
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+springdoc:
+  api-docs:
+    enabled: ${OPENAPI_ENABLED:true}
+  swagger-ui:
+    enabled: ${OPENAPI_ENABLED:true}
+customer:
+  web-base-url: ${WEB_BASE_URL:http://localhost:5173}
+  cors-allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  auth:
+    jwt-secret: ${JWT_SECRET}
+    access-token-duration: 24h
+    refresh-token-duration: 7d
+    cookie-secure: ${AUTH_COOKIE_SECURE:false}
+  integration:
+    pricing-base-url: ${PRICING_BASE_URL}
+    warehouse-base-url: ${WAREHOUSE_BASE_URL}
+    shipping-base-url: ${SHIPPING_BASE_URL}
+    connect-timeout: 3s
+    read-timeout: 10s
+  internal:
+    services:
+      counter:
+        api-key: ${INTERNAL_COUNTER_API_KEY:}
+        permissions: [COUNTER_SHIPMENT_CREATE]
+      cashier:
+        api-key: ${INTERNAL_CASHIER_API_KEY:}
+        permissions: [CASH_PAYMENT_CONFIRM]
+  vnpay:
+    tmn-code: ${VNPAY_TMN_CODE:}
+    hash-secret: ${VNPAY_HASH_SECRET:}
+    payment-url: ${VNPAY_PAYMENT_URL:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+    api-url: ${VNPAY_API_URL:https://sandbox.vnpayment.vn/merchant_webapi/api/transaction}
+    return-url: ${VNPAY_RETURN_URL}
+    ipn-url: ${VNPAY_IPN_URL:}
