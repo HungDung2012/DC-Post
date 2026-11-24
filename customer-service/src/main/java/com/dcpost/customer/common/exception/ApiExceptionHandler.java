@@ -3,6 +3,8 @@ package com.dcpost.customer.common.exception;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.servlet.http.HttpServletRequest;
 import com.dcpost.customer.common.web.ApiProblems;
+import com.dcpost.customer.integration.common.IntegrationException;
+import com.dcpost.customer.shipment.service.ShipmentCreationException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -13,6 +15,34 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler(ShipmentCreationException.class)
+    ProblemDetail shipmentCreation(ShipmentCreationException exception, HttpServletRequest request) {
+        var status = switch (exception.code()) {
+            case INVALID_SHIPMENT -> HttpStatus.BAD_REQUEST;
+            case FEE_CHANGED, IDEMPOTENCY_CONFLICT -> HttpStatus.CONFLICT;
+            case TRACKING_UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
+        };
+        var detail = switch (exception.code()) {
+            case INVALID_SHIPMENT -> "Thông tin vận đơn, bưu cục hoặc khóa yêu cầu không hợp lệ";
+            case FEE_CHANGED -> "Phí vận chuyển đã thay đổi. Vui lòng kiểm tra và xác nhận lại";
+            case IDEMPOTENCY_CONFLICT -> "Khóa yêu cầu đã được sử dụng với nội dung khác";
+            case TRACKING_UNAVAILABLE -> "Chưa thể tạo mã vận đơn. Vui lòng thử lại với cùng khóa yêu cầu";
+        };
+        var problem = ApiProblems.create(request, status, exception.code().name(), detail);
+        if (exception.currentFee() != null) problem.setProperty("currentFee", exception.currentFee());
+        return problem;
+    }
+
+    @ExceptionHandler(IntegrationException.class)
+    ProblemDetail integrationFailure(IntegrationException exception, HttpServletRequest request) {
+        var status = switch (exception.kind()) {
+            case INVALID_RESPONSE, UNAUTHORIZED -> HttpStatus.BAD_GATEWAY;
+            default -> HttpStatus.SERVICE_UNAVAILABLE;
+        };
+        return ApiProblems.create(request, status, "EXTERNAL_" + exception.kind().name(),
+                "Chưa thể xác minh thông tin từ dịch vụ liên quan. Vui lòng thử lại sau");
+    }
+
     @ExceptionHandler(PasswordMismatchException.class)
     ProblemDetail passwordMismatch(PasswordMismatchException exception, HttpServletRequest request) {
         return ApiProblems.create(request, HttpStatus.BAD_REQUEST, "CURRENT_PASSWORD_INVALID", exception.getMessage());

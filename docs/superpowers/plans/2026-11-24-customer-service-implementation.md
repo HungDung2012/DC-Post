@@ -14,7 +14,7 @@
 
 **Cập nhật bắt buộc ngày 24/11/2026:** Chủ dự án yêu cầu bỏ Docker khi code/test vì máy thiếu bộ nhớ. Không tự chạy Docker, build image hoặc khởi động container. Backend chạy trực tiếp bằng Java/Maven; Frontend bằng Vite; dùng MySQL đã cài trên máy. `mvn test` chỉ chạy test nghiệp vụ/HTTP không cần database; profile `integration` chạy riêng khi MySQL test cục bộ đã cấu hình. Maven và JVM test giới hạn heap 256 MB, 2 CPU; thực hiện tuần tự. Các bằng chứng Docker ở checkpoint trước chỉ là lịch sử, không phải hướng dẫn tiếp tục.
 
-Ngày lập: 24/11/2026. Design và implementation plan đã được chủ dự án duyệt; đang triển khai. Tasks 01–11 đã được triển khai và review; Tasks 12–34 chưa triển khai. Checkpoint Task 11 đã xác minh 103 test (64 test nghiệp vụ/HTTP và 39 test MySQL cục bộ), không Docker. Bằng chứng tại `docs/verification/2026-11-24-shipment-checkpoint.md`; các checkpoint trước giữ làm lịch sử. Các snippet dưới đây là hướng dẫn, không thay thế source và báo cáo kiểm thử thực tế.
+Ngày lập: 24/11/2026. Design và implementation plan đã được chủ dự án duyệt; đang triển khai. Tasks 01–12 đã được triển khai và review; Tasks 13–34 chưa triển khai. Checkpoint Task 12 đã xác minh 127 test (82 test nghiệp vụ/HTTP và 45 test MySQL cục bộ), không Docker. Bằng chứng tại `docs/verification/2026-11-24-shipment-creation-checkpoint.md`; các checkpoint trước giữ làm lịch sử. Các snippet dưới đây là hướng dẫn, không thay thế source và báo cáo kiểm thử thực tế.
 
 Nguồn: `PROJECT_SPEC.md` và `docs/superpowers/specs/2026-11-24-customer-service-design.md`. Không thay đổi nghiệp vụ đã thống nhất. Không thêm bảng, role, service hoặc framework kiểm thử Frontend.
 
@@ -286,13 +286,13 @@ Ghi chú triển khai: dùng JPA ManyToMany/JoinTable cho user_roles, giữ nguy
 
 **Files:** Create `customer-service/src/main/java/com/dcpost/customer/shipment/service/ShipmentCreationService.java`, `customer-service/src/main/java/com/dcpost/customer/shipment/service/ShipmentWriteService.java`, `customer-service/src/main/java/com/dcpost/customer/shipment/repository/ShipmentRepository.java`, `customer-service/src/main/java/com/dcpost/customer/shipment/dto/CreateShipmentRequest.java`, `test/backend/src/test/java/com/dcpost/customer/shipment/ShipmentCreationServiceTest.java`, `test/backend/src/test/java/com/dcpost/customer/shipment/ShipmentIdempotencyIT.java`.
 
-- [ ] RED từng ca: ONLINE HOME_PICKUP/CASH, ONLINE DROP_OFF/VNPAY, nhiều mặt hàng, thiếu bưu cục, phí frontend bị sửa, pricing unavailable, cùng key cùng payload, cùng key khác payload.
-- [ ] `ShipmentCreationService.create(CustomerPrincipal, String requestKey, CreateShipmentRequest)` gọi Pricing/Warehouse ngoài transaction; nhận phí mới khác phí khách xác nhận thì trả conflict yêu cầu xác nhận lại, không lưu đơn.
-- [ ] `ShipmentWriteService` là bean riêng nhận dữ liệu đã xác minh và transaction ngắn; tránh tự gọi method @Transactional cùng bean. Canonical hash chỉ dữ liệu nghiệp vụ đã chuẩn hóa, không timestamp ngẫu nhiên.
-- [ ] Trước khi gọi lại dependency, ưu tiên tìm bản ghi theo idempotency scope/key để replay yêu cầu đã commit. Race unique constraint được xử lý ngoài transaction đã rollback, sau đó đọc bản ghi thắng và đối chiếu hash.
-- [ ] Lưu snapshot/items/phí/phương thức nguyên tử; CASH=PENDING, VNPAY=WAITING_PAYMENT. Không gọi ShippingClient ở request tạo đơn.
-- [ ] Khi chuyển user_id local BIGINT sang created_by INT tạm thời, dùng kiểm tra miền số (ví dụ Math.toIntExact), không ép kiểu làm tràn. Retry collision tracking có giới hạn, tách khỏi conflict idempotency.
-- [ ] Install/test unit và integration; test transaction rollback không có item mồ côi. Commit `feat: create idempotent shipments with verified fees`.
+- [x] RED từng ca: ONLINE HOME_PICKUP/CASH, ONLINE DROP_OFF/VNPAY, nhiều mặt hàng, thiếu bưu cục, phí frontend bị sửa, pricing unavailable, cùng key cùng payload, cùng key khác payload.
+- [x] `ShipmentCreationService.create(CustomerPrincipal, String requestKey, CreateShipmentRequest)` gọi Pricing/Warehouse ngoài transaction; nhận phí mới khác phí khách xác nhận thì trả conflict yêu cầu xác nhận lại, không lưu đơn.
+- [x] `ShipmentWriteService` là bean riêng nhận dữ liệu đã xác minh và transaction ngắn; tránh tự gọi method @Transactional cùng bean. Canonical hash chỉ dữ liệu nghiệp vụ đã chuẩn hóa, không timestamp ngẫu nhiên.
+- [x] Trước khi gọi lại dependency, ưu tiên tìm bản ghi theo idempotency scope/key để replay yêu cầu đã commit. Race unique constraint được xử lý ngoài transaction đã rollback, sau đó đọc bản ghi thắng và đối chiếu hash.
+- [x] Lưu snapshot/items/phí/phương thức nguyên tử; CASH=PENDING, VNPAY=WAITING_PAYMENT. Không gọi ShippingClient ở request tạo đơn.
+- [x] Khi chuyển user_id local BIGINT sang created_by INT tạm thời, dùng kiểm tra miền số (ví dụ Math.toIntExact), không ép kiểu làm tràn. Retry collision tracking có giới hạn, tách khỏi conflict idempotency.
+- [x] Install/test unit và integration; test transaction rollback không có item mồ côi. Commit `feat: create idempotent shipments with verified fees`.
 
 **Nghiệm thu:** không lưu shipment trùng khi hai request đồng thời cùng key; DB transaction không mở trong Pricing/Warehouse HTTP.
 
