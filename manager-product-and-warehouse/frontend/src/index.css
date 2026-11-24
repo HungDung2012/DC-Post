@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+:root {
+  font-family: Inter, system-ui, sans-serif;
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 3px;
+}
+
+@layer components {
+  .icon-button {
+    @apply grid size-8 shrink-0 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900;
+  }
+
+  .menu-button {
+    @apply flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-45;
+  }
+
+  .primary-button {
+    @apply rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50;
+  }
+
+  .field {
+    @apply mt-1.5 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900;
+  }
+
+  .dialog-panel {
+    @apply fixed overflow-hidden border border-slate-200 bg-white text-slate-900 shadow-2xl;
+  }
+
+  .dialog-panel::backdrop {
+    background: rgb(15 23 42 / 50%);
+  }
+
+  .dialog-modal {
+    @apply inset-0 m-auto h-fit max-h-[calc(100dvh-2rem)] w-[min(28rem,calc(100%-2rem))] max-w-none rounded-2xl;
+  }
+
+  .dialog-drawer {
+    @apply inset-y-0 right-0 left-auto m-0 h-dvh max-h-none min-h-dvh w-full max-w-md;
+  }
+}

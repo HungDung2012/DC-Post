@@ -1,0 +1,21 @@
+# Local environment & secrets
+.env
+.env.local
+.env.*.local
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# Go binaries & test outputs
+*.exe
+*.test
+*.out
+/api
+
+# Frontend dependencies & build artifacts
+frontend/node_modules/
+frontend/dist/
+
+# OS / Editor
+.DS_Store
+Thumbs.db

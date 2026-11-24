@@ -1,0 +1,73 @@
+x-db-dsn: &db-dsn "${DOCKER_DB_DSN:-postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-dc_post}?sslmode=disable}"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:-dc_post}"
+      POSTGRES_USER: "${POSTGRES_USER:-postgres}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-postgres}"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [dc-post-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  migrate:
+    image: migrate/migrate:v4.18.3
+    environment:
+      DB_DSN: *db-dsn
+    entrypoint: ["/bin/sh", "-ec"]
+    # Keep this service's migration history separate in the shared database.
+    command:
+      - |
+        case "$$DB_DSN" in
+          *\?*) separator='&' ;;
+          *) separator='?' ;;
+        esac
+        exec migrate -path /migrations -database "$${DB_DSN}$${separator}x-migrations-table=manager_product_warehouse_schema_migrations" up
+    volumes:
+      - ./migrations:/migrations:ro
+    networks: [dc-post-net]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build: .
+    environment:
+      DB_DSN: *db-dsn
+      HTTP_PORT: "8082"
+      JWT_SECRET: "${JWT_SECRET:-}"
+    ports:
+      - "${API_PORT:-8082}:8082"
+    networks: [dc-post-net]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_DEV_JWT_SECRET: "${JWT_SECRET:-}"
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on: [api]
+    networks: [dc-post-net]
+
+volumes:
+  postgres-data:
+
+networks:
+  dc-post-net:
+    name: dc-post-net
+    driver: bridge
