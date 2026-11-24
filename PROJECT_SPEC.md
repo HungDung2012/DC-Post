@@ -3,6 +3,8 @@
 
 > Cập nhật môi trường ngày 24/11/2026 theo yêu cầu chủ dự án: phát triển và kiểm thử cục bộ chạy Java/Maven, Vite và MySQL cài trực tiếp, không sử dụng Docker do giới hạn bộ nhớ. Các mục Docker/Compose bên dưới được giữ làm tham chiếu đóng gói, không phải điều kiện để code hoặc test. Các quyết định nghiệp vụ và MySQL vẫn giữ nguyên.
 
+> Cập nhật định danh Task 11 ngày 24/11/2026: nhóm chưa xác nhận kiểu ID bên ngoài. Theo yêu cầu chủ dự án, tạm dùng INT cho drop_off_warehouse_id, created_by và cancelled_by; không coi đây là API Contract đã thống nhất. customer_id vẫn BIGINT theo users. Khi ánh xạ user_id local sang trường người thực hiện, phải kiểm tra miền INT, không cắt hoặc làm tràn số. Xác minh lại tại bước tích hợp thật.
+
 ## 1. Tổng quan dự án
 
 ### 1.1. Giới thiệu
@@ -831,12 +833,12 @@ Sử dụng composite primary key.
 - shipping_fee: DECIMAL(15,2).
 - pickup_method: VARCHAR(20).
 - creation_channel: VARCHAR(20).
-- drop_off_warehouse_id: BIGINT, NULLABLE.
-- created_by: BIGINT.
+- drop_off_warehouse_id: INT, NULLABLE (tạm thời, chờ xác nhận contract).
+- created_by: INT (tạm thời, chờ xác nhận contract).
 - note: TEXT, NULLABLE.
 - cancel_reason: VARCHAR(500), NULLABLE.
 - cancelled_at: DATETIME, NULLABLE.
-- cancelled_by: BIGINT, NULLABLE.
+- cancelled_by: INT, NULLABLE (tạm thời, chờ xác nhận contract).
 - created_at: DATETIME.
 
 Không lưu status_id, shipper_id, current_warehouse_id hoặc cod_amount.

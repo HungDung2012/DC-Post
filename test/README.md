@@ -38,8 +38,9 @@ Không trỏ test vào database development hoặc production. Không cần data
 thứ hai; hai database và tài khoản được phân quyền riêng có thể dùng chung MySQL cục bộ.
 `test/compose.yml` chỉ được giữ làm tham chiếu lịch sử, không được tự khởi chạy trên máy này.
 
-Đã có 45 unit/HTTP tests cho danh tính, xác thực, hồ sơ và thêm 18 test HTTP adapter.
-27 integration tests cần MySQL kiểm tra danh tính, xác thực và hồ sơ.
+Hiện có 64 test nghiệp vụ/HTTP (45 identity/auth/profile, 18 adapter, 1 tracking generator)
+và 39 integration tests MySQL (27 identity/auth/profile, 8 schema vận đơn, 4 persistence/domain).
+Checkpoint Task 11 đã chạy toàn bộ 103 test trên Java/MySQL cục bộ, không Docker.
 Integration tests kiểm tra migration, rollback khi ghi role lỗi, refresh đồng thời,
 CSRF/CORS/API key, thu hồi token và đổi mật khẩu. Các tài khoản fixture được rollback
 hoặc xóa sau test. Nhánh lỗi liên kết role dùng repository spy chỉ ở test để đưa ra

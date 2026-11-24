@@ -14,7 +14,7 @@
 
 **Cập nhật bắt buộc ngày 24/11/2026:** Chủ dự án yêu cầu bỏ Docker khi code/test vì máy thiếu bộ nhớ. Không tự chạy Docker, build image hoặc khởi động container. Backend chạy trực tiếp bằng Java/Maven; Frontend bằng Vite; dùng MySQL đã cài trên máy. `mvn test` chỉ chạy test nghiệp vụ/HTTP không cần database; profile `integration` chạy riêng khi MySQL test cục bộ đã cấu hình. Maven và JVM test giới hạn heap 256 MB, 2 CPU; thực hiện tuần tự. Các bằng chứng Docker ở checkpoint trước chỉ là lịch sử, không phải hướng dẫn tiếp tục.
 
-Ngày lập: 24/11/2026. Design và implementation plan đã được chủ dự án duyệt; đang triển khai. Tasks 01–10 đã được triển khai và review; Tasks 11–34 chưa triển khai. Task 10 và quy trình Java cục bộ được xác minh bằng 63 test không cần database; chưa chạy lại test MySQL trên môi trường cục bộ mới. Bằng chứng tại `docs/verification/2026-11-24-identity-checkpoint.md` và `docs/verification/2026-11-24-development-adapters.md`. Các snippet dưới đây là hướng dẫn, không thay thế source và báo cáo kiểm thử thực tế.
+Ngày lập: 24/11/2026. Design và implementation plan đã được chủ dự án duyệt; đang triển khai. Tasks 01–11 đã được triển khai và review; Tasks 12–34 chưa triển khai. Checkpoint Task 11 đã xác minh 103 test (64 test nghiệp vụ/HTTP và 39 test MySQL cục bộ), không Docker. Bằng chứng tại `docs/verification/2026-11-24-shipment-checkpoint.md`; các checkpoint trước giữ làm lịch sử. Các snippet dưới đây là hướng dẫn, không thay thế source và báo cáo kiểm thử thực tế.
 
 Nguồn: `PROJECT_SPEC.md` và `docs/superpowers/specs/2026-11-24-customer-service-design.md`. Không thay đổi nghiệp vụ đã thống nhất. Không thêm bảng, role, service hoặc framework kiểm thử Frontend.
 
@@ -275,12 +275,12 @@ Ghi chú triển khai: dùng JPA ManyToMany/JoinTable cho user_roles, giữ nguy
 
 **Files:** Create `customer-service/src/main/resources/db/migration/V2__create_shipments.sql`, `customer-service/src/main/java/com/dcpost/customer/shipment/entity/Shipment.java`, `customer-service/src/main/java/com/dcpost/customer/shipment/entity/ShipmentItem.java`, `customer-service/src/main/java/com/dcpost/customer/shipment/service/TrackingCodeGenerator.java`, `test/backend/src/test/java/com/dcpost/customer/shipment/ShipmentSchemaIT.java`, `test/backend/src/test/java/com/dcpost/customer/shipment/TrackingCodeGeneratorTest.java`.
 
-- [ ] RED cho customer NULL hợp lệ ở COUNTER, ONLINE phải có customer, không COUNTER/HOME_PICKUP, trọng lượng/kích thước > 0, quantity > 0, declared_value >= 0 và tracking unique.
-- [ ] Tạo hai bảng theo spec, thêm đúng nhóm trường trong design; creation_request_scope/key có unique chung, FK chỉ tới bảng local. Các CHECK constraint phải thực sự được MySQL thực thi.
-- [ ] Lưu payment_method ngay trên shipment; status đồng bộ/hủy riêng. Dùng tracking code ngẫu nhiên đủ khó đoán, ví dụ tiền tố DC + 128 bit random biểu diễn hex; không lộ shipment_id tuần tự.
-- [ ] Index `(customer_id, created_at, shipment_id)`, `(sync_status, sync_next_attempt_at)` và lịch hủy; chỉ thêm index recipient khi truy vấn thực tế hưởng lợi.
-- [ ] Test code generation không mang tính probabilistic flaky: kiểm tra format và xử lý unique conflict bằng repository, không chứng minh uniqueness bằng sinh vài chuỗi.
-- [ ] Install/test hai class; thông báo nếu external warehouse/actor ID không tương thích BIGINT trước khi đổi schema. Commit `feat: persist shipment snapshots and items`.
+- [x] RED cho customer NULL hợp lệ ở COUNTER, ONLINE phải có customer, không COUNTER/HOME_PICKUP, trọng lượng/kích thước > 0, quantity > 0, declared_value >= 0 và tracking unique.
+- [x] Tạo hai bảng theo spec, thêm đúng nhóm trường trong design; creation_request_scope/key có unique chung, FK chỉ tới bảng local. Các CHECK constraint phải thực sự được MySQL thực thi.
+- [x] Lưu payment_method ngay trên shipment; status đồng bộ/hủy riêng. Tracking dùng tiền tố DC + 128 bit SecureRandom biểu diễn hex; không lộ shipment_id tuần tự.
+- [x] Index `(customer_id, created_at, shipment_id)`, `(sync_status, sync_next_attempt_at)` và lịch hủy; không thêm index recipient.
+- [x] Test format và chủ động tạo collision cố định để kiểm tra database unique conflict; không dùng phép thử xác suất. Retry collision qua repository thuộc Task 12 cùng dịch vụ tạo đơn.
+- [x] Install/test schema, generator và JPA persistence. Chủ dự án xác nhận chưa có kiểu ID từ nhóm và yêu cầu tạm INT cho warehouse/actor; customer_id giữ BIGINT theo users. Ghi giả định tạm để đối chiếu Task 32. Commit `feat: persist shipment snapshots and items`.
 
 ## Task 12: Tạo đơn, phí và idempotency
 
@@ -291,6 +291,7 @@ Ghi chú triển khai: dùng JPA ManyToMany/JoinTable cho user_roles, giữ nguy
 - [ ] `ShipmentWriteService` là bean riêng nhận dữ liệu đã xác minh và transaction ngắn; tránh tự gọi method @Transactional cùng bean. Canonical hash chỉ dữ liệu nghiệp vụ đã chuẩn hóa, không timestamp ngẫu nhiên.
 - [ ] Trước khi gọi lại dependency, ưu tiên tìm bản ghi theo idempotency scope/key để replay yêu cầu đã commit. Race unique constraint được xử lý ngoài transaction đã rollback, sau đó đọc bản ghi thắng và đối chiếu hash.
 - [ ] Lưu snapshot/items/phí/phương thức nguyên tử; CASH=PENDING, VNPAY=WAITING_PAYMENT. Không gọi ShippingClient ở request tạo đơn.
+- [ ] Khi chuyển user_id local BIGINT sang created_by INT tạm thời, dùng kiểm tra miền số (ví dụ Math.toIntExact), không ép kiểu làm tràn. Retry collision tracking có giới hạn, tách khỏi conflict idempotency.
 - [ ] Install/test unit và integration; test transaction rollback không có item mồ côi. Commit `feat: create idempotent shipments with verified fees`.
 
 **Nghiệm thu:** không lưu shipment trùng khi hai request đồng thời cùng key; DB transaction không mở trong Pricing/Warehouse HTTP.

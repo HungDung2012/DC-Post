@@ -63,7 +63,7 @@ Constraint và index:
 - Khóa tạo đơn có uniqueness theo nguồn yêu cầu và người gọi; với COUNTER không dựa vào `customer_id` NULL mà dùng định danh service đã xác thực. Khóa là bắt buộc khi tạo đơn để retry an toàn.
 - Cùng khóa, cùng nội dung đã chuẩn hóa: trả đơn đã tạo; cùng khóa, khác nội dung: trả conflict. Kiểm tra quyền sở hữu trước khi trả dữ liệu.
 - ONLINE bắt buộc customer; COUNTER chỉ DROP_OFF; DROP_OFF bắt buộc định danh bưu cục. Các ID bên ngoài chỉ là tham chiếu logic, không có FK xuyên service.
-- Trường định danh bên ngoài hiện mô tả BIGINT trong đặc tả gốc; phải xác minh kiểu thực tế với nhóm trước migration liên quan. Không ép UUID hoặc chuỗi thành số.
+- Cập nhật Task 11 ngày 24/11/2026 theo chủ dự án: nhóm chưa xác nhận kiểu ID bên ngoài; tạm dùng INT cho drop_off_warehouse_id, created_by và cancelled_by. customer_id vẫn BIGINT theo users. Khi ánh xạ user_id local sang trường người thực hiện phải kiểm tra miền INT, không cắt hoặc làm tràn số. Đây là giả định tạm, phải đối chiếu tại Task 32; không ép UUID hoặc chuỗi thành số.
 - Index cho danh sách theo customer/thời gian và các điều kiện scheduler; không tạo index thứ hai trùng unique index.
 - BigDecimal cho tiền và kích thước/khối lượng; VND không nhận số tiền có phần lẻ khi chuyển sang VNPay. Không tự làm tròn mức phí bên ngoài mà chưa có quy tắc được thống nhất.
 - Thời gian lưu UTC; hiển thị Asia/Ho_Chi_Minh. Các giá trị thời gian ký/gửi VNPay tuân theo timezone của giao thức.
