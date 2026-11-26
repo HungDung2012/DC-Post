@@ -202,13 +202,13 @@ class ShipmentSyncClaimIT {
         long id = seed(PaymentMethod.CASH, PickupMethod.HOME_PICKUP);
         var claim = state.tryClaim(id, Instant.now().plusSeconds(1)).orElseThrow();
         jdbc.update("UPDATE shipments SET sync_attempt_count=sync_attempt_count+1 WHERE shipment_id=?", id);
-        state.finish(claim, OperationOutcome.CONFIRMED);
+        state.finish(claim, OperationOutcome.CONFIRMED, Instant.now());
         assertThat(status(id)).isEqualTo("PROCESSING");
         jdbc.update("UPDATE shipments SET sync_attempt_count=?,sync_started_at=DATE_ADD(sync_started_at, INTERVAL 1 SECOND) WHERE shipment_id=?", claim.attempt(), id);
-        state.finish(claim, OperationOutcome.CONFIRMED);
+        state.finish(claim, OperationOutcome.CONFIRMED, Instant.now());
         assertThat(status(id)).isEqualTo("PROCESSING");
         jdbc.update("UPDATE shipments SET sync_started_at=DATE_SUB(sync_started_at, INTERVAL 1 SECOND),sync_status='UNKNOWN' WHERE shipment_id=?", id);
-        state.finish(claim, OperationOutcome.CONFIRMED);
+        state.finish(claim, OperationOutcome.CONFIRMED, Instant.now());
         assertThat(status(id)).isEqualTo("UNKNOWN");
     }
 
@@ -233,7 +233,8 @@ class ShipmentSyncClaimIT {
             long id = seed(PaymentMethod.CASH, PickupMethod.HOME_PICKUP);
             doThrow(new IntegrationException(kind, true)).when(shipping).submit(any(), anyString());
             assertThatCode(() -> sync.sync(id)).doesNotThrowAnyException();
-            assertThat(status(id)).isEqualTo(kind == IntegrationException.Kind.UNAUTHORIZED ? "BLOCKED" : "UNKNOWN");
+            assertThat(status(id)).isEqualTo(kind == IntegrationException.Kind.UNAUTHORIZED ? "BLOCKED"
+                    : kind == IntegrationException.Kind.CONNECT_TIMEOUT ? "PENDING" : "UNKNOWN");
             assertThat(jdbc.queryForObject("SELECT sync_last_error_code FROM shipments WHERE shipment_id=?", String.class, id))
                     .isEqualTo("EXTERNAL_" + kind.name());
             sync.sync(id);
@@ -328,9 +329,9 @@ class ShipmentSyncClaimIT {
     @Test void Test_finish_002() {
         long id = seed(PaymentMethod.CASH, PickupMethod.HOME_PICKUP);
         var claim = state.tryClaim(id, Instant.now().plusSeconds(1)).orElseThrow();
-        state.finish(claim, OperationOutcome.UNKNOWN);
-        state.finish(claim, OperationOutcome.CONFIRMED);
-        state.fail(claim, IntegrationException.Kind.UNAUTHORIZED);
+        state.finish(claim, OperationOutcome.UNKNOWN, Instant.now());
+        state.finish(claim, OperationOutcome.CONFIRMED, Instant.now());
+        state.fail(claim, IntegrationException.Kind.UNAUTHORIZED, Instant.now());
         assertThat(status(id)).isEqualTo("UNKNOWN");
         assertThat(jdbc.queryForObject("SELECT sync_last_error_code FROM shipments WHERE shipment_id=?", String.class, id))
                 .isEqualTo("SHIPPING_UNKNOWN");

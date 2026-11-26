@@ -24,6 +24,17 @@ public class ShipmentSyncScheduler {
     @Scheduled(fixedDelayString = "${customer.shipment.sync.interval-ms:10000}",
             initialDelayString = "${customer.shipment.sync.initial-delay-ms:10000}")
     public void runBatch() {
+        try {
+            for (long shipmentId : state.recoveryCandidates(clock.instant(), batchSize)) {
+                try {
+                    sync.recover(shipmentId);
+                } catch (RuntimeException exception) {
+                    log.warn("Shipment recovery interrupted for shipmentId={} ({})", shipmentId, exception.getClass().getSimpleName());
+                }
+            }
+        } catch (RuntimeException exception) {
+            log.warn("Shipment recovery scan failed ({})", exception.getClass().getSimpleName());
+        }
         List<Long> candidates;
         try {
             candidates = state.candidates(clock.instant(), batchSize);

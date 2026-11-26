@@ -31,7 +31,7 @@ class ShipmentSyncServiceTest {
         var order = inOrder(state, shipping);
         order.verify(state).tryClaim(41, now);
         order.verify(shipping).submit(submission, claim.requestKey());
-        order.verify(state).finish(claim, OperationOutcome.CONFIRMED);
+        order.verify(state).finish(claim, OperationOutcome.CONFIRMED, now);
         verifyNoMoreInteractions(shipping);
     }
 

@@ -15,13 +15,14 @@ Task 13 đã có [API nội bộ tạo đơn tại quầy](docs/references/custo
 với xác thực service và quyền riêng. Task 14 đã có [API Customer tạo/list/detail](docs/references/customer-shipment-api.md),
 giới hạn quyền sở hữu và giữ snapshot khi Shipping lỗi. Task 15 đã có
 [scheduler MySQL và atomic claim](docs/references/shipment-synchronization.md), gửi CASH
-và chặn VNPAY khi chưa có dữ liệu thanh toán xác minh. Phục hồi/đối soát và thanh toán
+và chặn VNPAY khi chưa có dữ liệu thanh toán xác minh. Task 16 đã có phục hồi sau
+restart, đối soát UNKNOWN và retry có backoff khi đủ bằng chứng an toàn. Thanh toán
 còn ở các task tiếp theo.
 Task 10 đã có Interface/HTTP Adapter và mock
 server độc lập; giao thức mô phỏng chưa phải API Contract Go chính thức.
 Xem [bằng chứng checkpoint](docs/verification/2026-11-24-identity-checkpoint.md)
 và [cách gọi API xác thực](docs/references/customer-auth-api.md).
-Checkpoint mới nhất: [scheduler, 172 test trên Java/MySQL cục bộ](docs/verification/2026-11-26-shipment-sync-checkpoint.md).
+Checkpoint mới nhất: [phục hồi/đối soát, 193 test trên Java/MySQL cục bộ](docs/verification/2026-11-27-shipment-recovery-checkpoint.md).
 
 ## Yêu cầu môi trường
 
@@ -96,10 +97,12 @@ hiện tại, không in secret hoặc thực thi nội dung file. Có thể dùn
 Variables của IDE thay thế. Health: `/api/v1/public/health`.
 Mock tích hợp chạy bằng `python test/mock-server/server.py`; xem
 [hướng dẫn mô phỏng](test/mock-server/README.md). Không cần bật mock để chạy unit test.
-Scheduler mặc định xử lý tối đa 10 đơn CASH đến hạn mỗi lô; nghỉ 10 giây sau mỗi lô.
-SHIPMENT_SYNC_ENABLED=false tắt gửi tự động. UNKNOWN/BLOCKED không tự gửi lại;
-PROCESSING bị gián đoạn được xử lý tiếp tại Task 16. VNPAY chỉ được bật sau khi
-nối payment đã xác minh PAID tại Task 21.
+Scheduler mặc định xử lý tối đa 10 đơn cần đối soát rồi 10 đơn CASH đến hạn mỗi chu kỳ;
+nghỉ 10 giây sau chu kỳ. SHIPMENT_SYNC_ENABLED=false tắt scheduler. PROCESSING quá
+2 phút được đối soát; UNKNOWN tra cứu lại sau 1 phút, không tự gửi lại. Retry an toàn
+dùng backoff từ 30 giây, tối đa 5 lần submit. Adapter hiện tại chưa cho retry sau
+NOT_FOUND khi chưa xác minh contract. Xem [cấu hình và điều kiện retry](docs/references/shipment-synchronization.md).
+VNPAY chỉ được bật sau khi nối payment đã xác minh PAID tại Task 21.
 
 ## Kiểm thử
 

@@ -58,4 +58,18 @@ class ShipmentSyncSchedulerTest {
             assertThat(context).doesNotHaveBean(ScheduledAnnotationBeanPostProcessor.class);
         });
     }
+
+    /** Recovery is scheduled before new sends, and one recovery failure does not starve the rest of either batch. */
+    @Test void Test_runBatch_003() {
+        when(state.recoveryCandidates(now, 2)).thenReturn(List.of(31L, 32L));
+        when(state.candidates(now, 2)).thenReturn(List.of(41L));
+        doThrow(new IllegalStateException("private detail")).when(sync).recover(31);
+        new ShipmentSyncScheduler(state, sync, clock, 2).runBatch();
+        var order = inOrder(state, sync);
+        order.verify(state).recoveryCandidates(now, 2);
+        order.verify(sync).recover(31);
+        order.verify(sync).recover(32);
+        order.verify(state).candidates(now, 2);
+        order.verify(sync).sync(41);
+    }
 }

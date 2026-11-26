@@ -14,7 +14,7 @@
 
 **Cập nhật bắt buộc ngày 24/11/2026:** Chủ dự án yêu cầu bỏ Docker khi code/test vì máy thiếu bộ nhớ. Không tự chạy Docker, build image hoặc khởi động container. Backend chạy trực tiếp bằng Java/Maven; Frontend bằng Vite; dùng MySQL đã cài trên máy. `mvn test` chỉ chạy test nghiệp vụ/HTTP không cần database; profile `integration` chạy riêng khi MySQL test cục bộ đã cấu hình. Maven và JVM test giới hạn heap 256 MB, 2 CPU; thực hiện tuần tự. Các bằng chứng Docker ở checkpoint trước chỉ là lịch sử, không phải hướng dẫn tiếp tục.
 
-Ngày lập: 24/11/2026. Design và implementation plan đã được chủ dự án duyệt; đang triển khai. Tasks 01–15 đã được triển khai và review; Tasks 16–34 chưa triển khai. Checkpoint Task 15 ngày 26/11/2026 đã xác minh 172 test (91 test nghiệp vụ/HTTP và 81 test MySQL cục bộ), không Docker. Bằng chứng tại `docs/verification/2026-11-26-shipment-sync-checkpoint.md`; các checkpoint trước giữ làm lịch sử. Các snippet dưới đây là hướng dẫn, không thay thế source và báo cáo kiểm thử thực tế.
+Ngày lập: 24/11/2026. Design và implementation plan đã được chủ dự án duyệt; đang triển khai. Tasks 01–16 đã được triển khai và review; Tasks 17–34 chưa triển khai. Checkpoint Task 16 ngày 27/11/2026 đã xác minh 193 test (95 test nghiệp vụ/HTTP và 98 test MySQL cục bộ), không Docker. Bằng chứng tại `docs/verification/2026-11-27-shipment-recovery-checkpoint.md`; các checkpoint trước giữ làm lịch sử. Các snippet dưới đây là hướng dẫn, không thay thế source và báo cáo kiểm thử thực tế.
 
 Nguồn: `PROJECT_SPEC.md` và `docs/superpowers/specs/2026-11-24-customer-service-design.md`. Không thay đổi nghiệp vụ đã thống nhất. Không thêm bảng, role, service hoặc framework kiểm thử Frontend.
 
@@ -354,11 +354,21 @@ gián đoạn, đối soát và backoff thuộc Task 16. Tham chiếu docs/refer
 
 **Files:** Modify `customer-service/src/main/java/com/dcpost/customer/shipment/service/ShipmentSyncService.java`, `customer-service/src/main/java/com/dcpost/customer/shipment/service/ShipmentSyncStateService.java`, `customer-service/src/main/java/com/dcpost/customer/shipment/service/ShipmentSyncScheduler.java`; Create `test/backend/src/test/java/com/dcpost/customer/shipment/ShipmentRecoveryIT.java`.
 
-- [ ] RED cho connect failure chắc chắn chưa gửi, read timeout sau tiếp nhận, response sai cấu trúc, auth failure và PROCESSING bị gián đoạn.
-- [ ] Chuyển tình huống có thể đã gửi sang UNKNOWN; PROCESSING quá hạn cũng UNKNOWN, không tự PENDING. Không lấy HTTP 500 làm bằng chứng chắc chắn bên ngoài chưa lưu.
-- [ ] `findSubmission` xác nhận đã tiếp nhận thì SYNCED; xác nhận chưa nhận chỉ được retry nếu contract bảo đảm kết luận đó đủ an toàn; UNSUPPORTED giữ UNKNOWN/BLOCKED với mã lý do.
-- [ ] Backoff cấu hình, lô nhỏ và giới hạn attempt; không giữ khóa khi sleep/HTTP. Ghi code lỗi đã làm sạch, không payload cá nhân.
-- [ ] Install/test `ShipmentRecoveryIT`; mô phỏng restart bằng persisted state và khởi tạo lại service/scheduler test, không cần kill ứng dụng chính. Commit `fix: recover uncertain shipment submissions safely`.
+- [x] RED cho connect failure chắc chắn chưa gửi, read timeout sau tiếp nhận, response sai cấu trúc, auth failure và PROCESSING bị gián đoạn.
+- [x] Chuyển tình huống có thể đã gửi sang UNKNOWN; PROCESSING quá hạn cũng UNKNOWN, không tự PENDING. Không lấy HTTP 500 làm bằng chứng chắc chắn bên ngoài chưa lưu.
+- [x] `findSubmission` xác nhận đã tiếp nhận thì SYNCED; xác nhận chưa nhận chỉ được retry nếu contract bảo đảm kết luận đó đủ an toàn; UNSUPPORTED giữ UNKNOWN/BLOCKED với mã lý do.
+- [x] Backoff cấu hình, lô nhỏ và giới hạn attempt; không giữ khóa khi sleep/HTTP. Ghi code lỗi đã làm sạch, không payload cá nhân.
+- [x] Install/test `ShipmentRecoveryIT`; mô phỏng restart bằng persisted state và khởi tạo lại service/scheduler test, không cần kill ứng dụng chính. Commit `fix: recover uncertain shipment submissions safely`.
+
+Ghi chú Task 16: tái sử dụng sync_* trên shipments, không migration mới. Scheduler
+chạy lô recovery trước lô submit. UNKNOWN claim lease tra cứu; worker cũ bị chặn bởi
+state/attempt/startedAt. CONNECT_TIMEOUT chắc chắn chưa gửi được retry có backoff;
+các lỗi còn lại phải đối soát. Capability supportsSafeResubmission mặc định false,
+kể cả HTTP adapter hiện tại; NOT_FOUND chưa có bảo đảm từ contract thì BLOCKED với
+mã SHIPPING_RETRY_UNSUPPORTED. Muốn bật phải xác minh kết luận tra cứu có thẩm quyền
+và phía nhận chống trùng cùng key kể cả request đến muộn. maxAttempts chỉ đếm submit;
+tra cứu UNKNOWN dùng reconciliationDelay và giới hạn lô, không tăng attempt. VNPAY
+vẫn bị chặn đến Task 21. Tham chiếu docs/references/shipment-synchronization.md.
 
 ## Task 17: Customer API documentation và error contract
 

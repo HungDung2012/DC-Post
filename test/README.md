@@ -38,10 +38,10 @@ Không trỏ test vào database development hoặc production. Không cần data
 thứ hai; hai database và tài khoản được phân quyền riêng có thể dùng chung MySQL cục bộ.
 `test/compose.yml` chỉ được giữ làm tham chiếu lịch sử, không được tự khởi chạy trên máy này.
 
-Hiện có 91 test nghiệp vụ/HTTP (45 identity/auth/profile, 18 adapter, 1 tracking generator,
-18 tạo đơn/biểu diễn lỗi HTTP, 3 query/enrichment, 6 sync/scheduler) và 81 integration tests MySQL (27 identity/auth/profile,
+Hiện có 95 test nghiệp vụ/HTTP (45 identity/auth/profile, 18 adapter, 1 tracking generator,
+18 tạo đơn/biểu diễn lỗi HTTP, 3 query/enrichment, 10 sync/scheduler/config) và 98 integration tests MySQL (27 identity/auth/profile,
 8 schema vận đơn, 4 persistence/domain, 6 tạo đơn/idempotency, 9 counter API, 13 Customer shipment API,
-14 sync/atomic claim). Checkpoint Task 15 đã chạy toàn bộ 172 test trên Java/MySQL cục bộ, không Docker.
+14 sync/atomic claim, 17 recovery/retry). Checkpoint Task 16 đã chạy toàn bộ 193 test trên Java/MySQL cục bộ, không Docker.
 Các ca mới kiểm tra chuẩn hóa snapshot, xác minh phí, replay trước dependency,
 hai request đồng thời cùng key (cùng hoặc khác payload), retry collision tracking,
 rollback toàn bộ khi một item lỗi và HTTP dependency chạy ngoài transaction.
@@ -56,11 +56,17 @@ ShipmentOwnershipIT xác minh cả SQL count/search/ownership, phân trang ổn 
 snapshot/items và HTTP enrichment ngoài transaction. ShipmentQueryServiceTest kiểm tra
 payload tracking sai vẫn giữ snapshot và từ chối Instant vượt phạm vi MySQL DATETIME.
 ShipmentSyncClaimIT xác minh claim commit trước HTTP, worker cạnh tranh dùng barrier/latch,
-due/cancellation/VNPAY guard, candidate limit/order, stale result và lỗi dependency không
-tự retry. Có một ca gọi ShippingHttpAdapter thật tới HTTP server loopback, kiểm tra
+due/cancellation/VNPAY guard, candidate limit/order, stale result và backoff cho connect
+timeout chắc chắn chưa gửi; lỗi không chắc chắn không tự gửi lại. Có một ca gọi ShippingHttpAdapter thật tới HTTP server loopback, kiểm tra
 payload/key và PROCESSING đã thấy từ connection MySQL khác. Profile test tắt scheduler
 nền; ShipmentSyncSchedulerTest kiểm tra batch độc lập, lỗi một worker không chặn worker
-tiếp theo và wiring bật/tắt task bằng ApplicationContextRunner. Không thêm test hook vào app.
+tiếp theo và wiring bật/tắt task bằng ApplicationContextRunner. ShipmentRecoveryIT kiểm tra
+restart từ trạng thái MySQL, PROCESSING hết hạn, UNKNOWN có lease, hai worker đối soát
+đồng thời, worker cũ không ghi đè, FOUND/NOT_FOUND/UNSUPPORTED, giới hạn attempt và
+đổi trạng thái hủy/phương thức thanh toán khi đang tra cứu. HTTP loopback thật mô phỏng
+HTTP 500, response sai và read timeout sau khi server nhận POST, sau đó GET FOUND;
+chỉ một POST được gửi. ShipmentSyncPropertiesTest kiểm tra backoff có trần, cấu hình
+sai và processing timeout phải lớn hơn tổng timeout adapter. Không thêm test hook vào app.
 Integration tests kiểm tra migration, rollback khi ghi role lỗi, refresh đồng thời,
 CSRF/CORS/API key, thu hồi token và đổi mật khẩu. Các tài khoản fixture được rollback
 hoặc xóa sau test. Nhánh lỗi liên kết role dùng repository spy chỉ ở test để đưa ra
