@@ -11,12 +11,14 @@ Phân hệ Customer của hệ thống quản lý vận đơn Microservices. Đ�
 mật khẩu (Tasks 01–09). Access token có hạn 24 giờ; refresh có hạn 7 ngày.
 Frontend hiện là trang khởi tạo, chưa có giao diện nghiệp vụ. Tasks 11–12 đã có schema
 shipments/shipment_items, snapshot và dịch vụ tạo đơn chống trùng, xác minh lại phí.
-Controller tạo đơn, thanh toán và scheduler còn ở các task tiếp theo.
+Task 13 đã có [API nội bộ tạo đơn tại quầy](docs/references/customer-counter-api.md)
+với xác thực service và quyền riêng. Controller tạo đơn online, thanh toán và
+scheduler còn ở các task tiếp theo.
 Task 10 đã có Interface/HTTP Adapter và mock
 server độc lập; giao thức mô phỏng chưa phải API Contract Go chính thức.
 Xem [bằng chứng checkpoint](docs/verification/2026-11-24-identity-checkpoint.md)
 và [cách gọi API xác thực](docs/references/customer-auth-api.md).
-Checkpoint mới nhất: [tạo vận đơn, 127 test trên Java/MySQL cục bộ](docs/verification/2026-11-24-shipment-creation-checkpoint.md).
+Checkpoint mới nhất: [counter API, 136 test trên Java/MySQL cục bộ](docs/verification/2026-11-26-counter-shipment-checkpoint.md).
 
 ## Yêu cầu môi trường
 

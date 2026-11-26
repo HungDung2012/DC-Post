@@ -39,14 +39,19 @@ thứ hai; hai database và tài khoản được phân quyền riêng có thể
 `test/compose.yml` chỉ được giữ làm tham chiếu lịch sử, không được tự khởi chạy trên máy này.
 
 Hiện có 82 test nghiệp vụ/HTTP (45 identity/auth/profile, 18 adapter, 1 tracking generator,
-18 tạo đơn/biểu diễn lỗi HTTP) và 45 integration tests MySQL (27 identity/auth/profile,
-8 schema vận đơn, 4 persistence/domain, 6 tạo đơn/idempotency).
-Checkpoint Task 12 đã chạy toàn bộ 127 test trên Java/MySQL cục bộ, không Docker.
+18 tạo đơn/biểu diễn lỗi HTTP) và 54 integration tests MySQL (27 identity/auth/profile,
+8 schema vận đơn, 4 persistence/domain, 6 tạo đơn/idempotency, 9 counter API).
+Checkpoint Task 13 đã chạy toàn bộ 136 test trên Java/MySQL cục bộ, không Docker.
 Các ca mới kiểm tra chuẩn hóa snapshot, xác minh phí, replay trước dependency,
 hai request đồng thời cùng key (cùng hoặc khác payload), retry collision tracking,
 rollback toàn bộ khi một item lỗi và HTTP dependency chạy ngoài transaction.
-Probe controller chỉ thuộc test để xác minh Problem Details; controller tạo đơn thật
-thuộc Tasks 13–14, chưa tuyên bố endpoint đó đã triển khai.
+CounterShipmentIT kiểm tra endpoint thật qua HTTP filters/MockMvc và MySQL: service source,
+guest không có user, chặn liên kết customer chưa xác minh, actor INT không bị cắt số,
+scope giữa hai service, replay dữ liệu chuẩn hóa, conflict payload/actor, concurrent create
+và phân quyền CASH. Probe tạo counter cũ đã bỏ để không trùng mapping endpoint thật;
+probe CASH còn giữ cho security test đến task triển khai xác nhận tiền mặt.
+ShipmentCreationHttpTest vẫn chỉ dùng probe để kiểm tra Problem Details;
+controller tạo đơn ONLINE thuộc Task 14, chưa triển khai.
 Integration tests kiểm tra migration, rollback khi ghi role lỗi, refresh đồng thời,
 CSRF/CORS/API key, thu hồi token và đổi mật khẩu. Các tài khoản fixture được rollback
 hoặc xóa sau test. Nhánh lỗi liên kết role dùng repository spy chỉ ở test để đưa ra

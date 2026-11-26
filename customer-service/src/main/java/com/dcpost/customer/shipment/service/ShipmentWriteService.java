@@ -22,13 +22,24 @@ public class ShipmentWriteService {
     @Transactional
     public ShipmentCreated create(long customerId, int actorId, String scope, String key, String hash,
             CreateShipmentRequest request, BigDecimal verifiedFee) {
+        return persist(customerId, actorId, "customer", CreationChannel.ONLINE, scope, key, hash, request, verifiedFee);
+    }
+
+    @Transactional
+    public ShipmentCreated createCounter(int actorId, String actorSource, String scope, String key, String hash,
+            CreateShipmentRequest request, BigDecimal verifiedFee) {
+        return persist(null, actorId, actorSource, CreationChannel.COUNTER, scope, key, hash, request, verifiedFee);
+    }
+
+    private ShipmentCreated persist(Long customerId, int actorId, String actorSource, CreationChannel channel,
+            String scope, String key, String hash, CreateShipmentRequest request, BigDecimal verifiedFee) {
         var sender = request.sender(); var recipient = request.recipient(); var parcel = request.parcel();
         var shipment = new Shipment(customerId, codes.generate(),
                 new Shipment.Contact(sender.name(), sender.phone(), sender.address()),
                 new Shipment.Contact(recipient.name(), recipient.phone(), recipient.address()),
                 new Shipment.Parcel(parcel.weightKg(), parcel.lengthCm(), parcel.widthCm(), parcel.heightCm()),
-                verifiedFee, request.pickupMethod(), CreationChannel.ONLINE, request.paymentMethod(),
-                request.dropOffWarehouseId(), new Shipment.Creation(scope, key, hash, "customer", actorId),
+                verifiedFee, request.pickupMethod(), channel, request.paymentMethod(),
+                request.dropOffWarehouseId(), new Shipment.Creation(scope, key, hash, actorSource, actorId),
                 request.note(), clock.instant());
         for (var item : request.items())
             shipment.addItem(item.name(), item.category(), item.quantity(), item.declaredValue(), item.note());

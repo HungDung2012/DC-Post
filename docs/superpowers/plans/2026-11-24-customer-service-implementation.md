@@ -14,7 +14,7 @@
 
 **Cập nhật bắt buộc ngày 24/11/2026:** Chủ dự án yêu cầu bỏ Docker khi code/test vì máy thiếu bộ nhớ. Không tự chạy Docker, build image hoặc khởi động container. Backend chạy trực tiếp bằng Java/Maven; Frontend bằng Vite; dùng MySQL đã cài trên máy. `mvn test` chỉ chạy test nghiệp vụ/HTTP không cần database; profile `integration` chạy riêng khi MySQL test cục bộ đã cấu hình. Maven và JVM test giới hạn heap 256 MB, 2 CPU; thực hiện tuần tự. Các bằng chứng Docker ở checkpoint trước chỉ là lịch sử, không phải hướng dẫn tiếp tục.
 
-Ngày lập: 24/11/2026. Design và implementation plan đã được chủ dự án duyệt; đang triển khai. Tasks 01–12 đã được triển khai và review; Tasks 13–34 chưa triển khai. Checkpoint Task 12 đã xác minh 127 test (82 test nghiệp vụ/HTTP và 45 test MySQL cục bộ), không Docker. Bằng chứng tại `docs/verification/2026-11-24-shipment-creation-checkpoint.md`; các checkpoint trước giữ làm lịch sử. Các snippet dưới đây là hướng dẫn, không thay thế source và báo cáo kiểm thử thực tế.
+Ngày lập: 24/11/2026. Design và implementation plan đã được chủ dự án duyệt; đang triển khai. Tasks 01–13 đã được triển khai và review; Tasks 14–34 chưa triển khai. Checkpoint Task 13 ngày 26/11/2026 đã xác minh 136 test (82 test nghiệp vụ/HTTP và 54 test MySQL cục bộ), không Docker. Bằng chứng tại `docs/verification/2026-11-26-counter-shipment-checkpoint.md`; các checkpoint trước giữ làm lịch sử. Các snippet dưới đây là hướng dẫn, không thay thế source và báo cáo kiểm thử thực tế.
 
 Nguồn: `PROJECT_SPEC.md` và `docs/superpowers/specs/2026-11-24-customer-service-design.md`. Không thay đổi nghiệp vụ đã thống nhất. Không thêm bảng, role, service hoặc framework kiểm thử Frontend.
 
@@ -300,11 +300,11 @@ Ghi chú triển khai: dùng JPA ManyToMany/JoinTable cho user_roles, giữ nguy
 
 **Files:** Create `customer-service/src/main/java/com/dcpost/customer/shipment/controller/InternalShipmentController.java`, `customer-service/src/main/java/com/dcpost/customer/shipment/dto/CounterShipmentRequest.java`, `test/backend/src/test/java/com/dcpost/customer/shipment/CounterShipmentIT.java`; Modify `customer-service/src/main/java/com/dcpost/customer/shipment/service/ShipmentCreationService.java`.
 
-- [ ] RED cho COUNTER/DROP_OFF không customer, COUNTER/HOME_PICKUP bị chặn, CUSTOMER token không được tạo hộ, actor source được lưu đúng service principal.
-- [ ] Tạo `POST /api/v1/internal/shipments`; service principal có permission tạo counter mới được gọi. `created_by` là nhân viên từ service được tin cậy, kèm nguồn; không tạo users cho guest.
-- [ ] Counter có customer_id chỉ được liên kết nếu phía gọi cung cấp bằng chứng/định danh theo contract nhóm. Khi chưa có cơ chế đó, chấp nhận counter không customer, không tự ghép theo phone/email.
-- [ ] Install/test `CounterShipmentIT`; kiểm tra scope idempotency giữa hai service không trùng nhau.
-- [ ] Commit `feat: expose authenticated counter shipment creation`.
+- [x] RED cho COUNTER/DROP_OFF không customer, COUNTER/HOME_PICKUP bị chặn, CUSTOMER token không được tạo hộ, actor source được lưu đúng service principal.
+- [x] Tạo `POST /api/v1/internal/shipments`; service principal có permission tạo counter mới được gọi. `created_by` là nhân viên từ service được tin cậy, kèm nguồn; không tạo users cho guest.
+- [x] Counter có customer_id chỉ được liên kết nếu phía gọi cung cấp bằng chứng/định danh theo contract nhóm. Khi chưa có cơ chế đó, chấp nhận counter không customer, không tự ghép theo phone/email.
+- [x] Install/test `CounterShipmentIT`; kiểm tra scope idempotency giữa hai service không trùng nhau.
+- [x] Commit `feat: expose authenticated counter shipment creation`.
 
 ## Task 14: Danh sách, chi tiết và quyền sở hữu
 

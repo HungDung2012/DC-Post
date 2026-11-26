@@ -82,7 +82,7 @@ class SecurityBoundaryIT {
         mvc.perform(post("/api/v1/internal/shipments").header("X-API-Key", "isolated-cashier-test-key"))
                 .andExpect(status().isForbidden());
         mvc.perform(post("/api/v1/internal/shipments").header("X-API-Key", "isolated-counter-test-key"))
-                .andExpect(status().isOk());
+                .andExpect(status().isBadRequest());
         mvc.perform(post("/api/v1/internal/shipments/123/cash-confirmations")
                         .header("X-API-Key", "isolated-cashier-test-key"))
                 .andExpect(status().isOk());
@@ -202,7 +202,6 @@ class SecurityBoundaryIT {
     @Profile("security-boundary")
     static class ProbeController {
         @GetMapping("/api/v1/customer/security-probe") String customer() { return "ok"; }
-        @PostMapping("/api/v1/internal/shipments") String counter() { return "ok"; }
         @PostMapping("/api/v1/internal/shipments/{id}/cash-confirmations") String cash() { return "ok"; }
     }
 }
