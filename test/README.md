@@ -38,10 +38,10 @@ Không trỏ test vào database development hoặc production. Không cần data
 thứ hai; hai database và tài khoản được phân quyền riêng có thể dùng chung MySQL cục bộ.
 `test/compose.yml` chỉ được giữ làm tham chiếu lịch sử, không được tự khởi chạy trên máy này.
 
-Hiện có 85 test nghiệp vụ/HTTP (45 identity/auth/profile, 18 adapter, 1 tracking generator,
-18 tạo đơn/biểu diễn lỗi HTTP, 3 query/enrichment) và 67 integration tests MySQL (27 identity/auth/profile,
-8 schema vận đơn, 4 persistence/domain, 6 tạo đơn/idempotency, 9 counter API, 13 Customer shipment API).
-Checkpoint Task 14 đã chạy toàn bộ 152 test trên Java/MySQL cục bộ, không Docker.
+Hiện có 91 test nghiệp vụ/HTTP (45 identity/auth/profile, 18 adapter, 1 tracking generator,
+18 tạo đơn/biểu diễn lỗi HTTP, 3 query/enrichment, 6 sync/scheduler) và 81 integration tests MySQL (27 identity/auth/profile,
+8 schema vận đơn, 4 persistence/domain, 6 tạo đơn/idempotency, 9 counter API, 13 Customer shipment API,
+14 sync/atomic claim). Checkpoint Task 15 đã chạy toàn bộ 172 test trên Java/MySQL cục bộ, không Docker.
 Các ca mới kiểm tra chuẩn hóa snapshot, xác minh phí, replay trước dependency,
 hai request đồng thời cùng key (cùng hoặc khác payload), retry collision tracking,
 rollback toàn bộ khi một item lỗi và HTTP dependency chạy ngoài transaction.
@@ -55,6 +55,12 @@ controller tạo đơn ONLINE thật được kiểm tra trong ShipmentOwnership
 ShipmentOwnershipIT xác minh cả SQL count/search/ownership, phân trang ổn định,
 snapshot/items và HTTP enrichment ngoài transaction. ShipmentQueryServiceTest kiểm tra
 payload tracking sai vẫn giữ snapshot và từ chối Instant vượt phạm vi MySQL DATETIME.
+ShipmentSyncClaimIT xác minh claim commit trước HTTP, worker cạnh tranh dùng barrier/latch,
+due/cancellation/VNPAY guard, candidate limit/order, stale result và lỗi dependency không
+tự retry. Có một ca gọi ShippingHttpAdapter thật tới HTTP server loopback, kiểm tra
+payload/key và PROCESSING đã thấy từ connection MySQL khác. Profile test tắt scheduler
+nền; ShipmentSyncSchedulerTest kiểm tra batch độc lập, lỗi một worker không chặn worker
+tiếp theo và wiring bật/tắt task bằng ApplicationContextRunner. Không thêm test hook vào app.
 Integration tests kiểm tra migration, rollback khi ghi role lỗi, refresh đồng thời,
 CSRF/CORS/API key, thu hồi token và đổi mật khẩu. Các tài khoản fixture được rollback
 hoặc xóa sau test. Nhánh lỗi liên kết role dùng repository spy chỉ ở test để đưa ra

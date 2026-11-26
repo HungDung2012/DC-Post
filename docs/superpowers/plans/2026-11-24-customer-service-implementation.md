@@ -14,7 +14,7 @@
 
 **Cập nhật bắt buộc ngày 24/11/2026:** Chủ dự án yêu cầu bỏ Docker khi code/test vì máy thiếu bộ nhớ. Không tự chạy Docker, build image hoặc khởi động container. Backend chạy trực tiếp bằng Java/Maven; Frontend bằng Vite; dùng MySQL đã cài trên máy. `mvn test` chỉ chạy test nghiệp vụ/HTTP không cần database; profile `integration` chạy riêng khi MySQL test cục bộ đã cấu hình. Maven và JVM test giới hạn heap 256 MB, 2 CPU; thực hiện tuần tự. Các bằng chứng Docker ở checkpoint trước chỉ là lịch sử, không phải hướng dẫn tiếp tục.
 
-Ngày lập: 24/11/2026. Design và implementation plan đã được chủ dự án duyệt; đang triển khai. Tasks 01–14 đã được triển khai và review; Tasks 15–34 chưa triển khai. Checkpoint Task 14 ngày 26/11/2026 đã xác minh 152 test (85 test nghiệp vụ/HTTP và 67 test MySQL cục bộ), không Docker. Bằng chứng tại `docs/verification/2026-11-26-shipment-ownership-checkpoint.md`; các checkpoint trước giữ làm lịch sử. Các snippet dưới đây là hướng dẫn, không thay thế source và báo cáo kiểm thử thực tế.
+Ngày lập: 24/11/2026. Design và implementation plan đã được chủ dự án duyệt; đang triển khai. Tasks 01–15 đã được triển khai và review; Tasks 16–34 chưa triển khai. Checkpoint Task 15 ngày 26/11/2026 đã xác minh 172 test (91 test nghiệp vụ/HTTP và 81 test MySQL cục bộ), không Docker. Bằng chứng tại `docs/verification/2026-11-26-shipment-sync-checkpoint.md`; các checkpoint trước giữ làm lịch sử. Các snippet dưới đây là hướng dẫn, không thay thế source và báo cáo kiểm thử thực tế.
 
 Nguồn: `PROJECT_SPEC.md` và `docs/superpowers/specs/2026-11-24-customer-service-design.md`. Không thay đổi nghiệp vụ đã thống nhất. Không thêm bảng, role, service hoặc framework kiểm thử Frontend.
 
@@ -326,9 +326,9 @@ ShipmentQueryServiceTest kiểm tra phạm vi ngày MySQL và tracking sai cấu
 
 **Files:** Create `customer-service/src/main/java/com/dcpost/customer/shipment/service/ShipmentSyncScheduler.java`, `customer-service/src/main/java/com/dcpost/customer/shipment/service/ShipmentSyncService.java`, `customer-service/src/main/java/com/dcpost/customer/shipment/service/ShipmentSyncStateService.java`, `test/backend/src/test/java/com/dcpost/customer/shipment/ShipmentSyncServiceTest.java`, `test/backend/src/test/java/com/dcpost/customer/shipment/ShipmentSyncClaimIT.java`.
 
-- [ ] RED: CASH được gửi, VNPAY chưa PAID không gửi, hai worker chỉ một HTTP call, đơn đã hủy không gửi. Test concurrency dùng latch/barrier, không sleep để đoán thứ tự.
-- [ ] Atomic claim đặt PROCESSING/start time/increment attempt trong transaction; điều kiện phải gồm PENDING, đến hạn, chưa hủy/chưa yêu cầu hủy, payment hợp lệ. Kiểm tra số hàng cập nhật đúng 1 trước HTTP.
-- [ ] Dùng một câu lệnh update có điều kiện tương đương:
+- [x] RED/GREEN cho CASH được gửi; kiểm tra thêm VNPAY chưa PAID không gửi, hai worker chỉ một HTTP call, đơn đã hủy không gửi. Test concurrency dùng latch/barrier, không sleep để đoán thứ tự.
+- [x] Atomic claim đặt PROCESSING/start time/increment attempt trong transaction; điều kiện gồm PENDING, đến hạn, chưa hủy/chưa yêu cầu hủy, CASH hợp lệ. Kiểm tra số hàng cập nhật đúng 1 trước HTTP.
+- [x] Dùng một câu lệnh update có điều kiện tương đương (source bổ sung payment_method=CASH và cancelled_at IS NULL):
 
 ```sql
 UPDATE shipments
@@ -339,9 +339,16 @@ WHERE shipment_id = :id AND sync_status = 'PENDING'
   AND (sync_next_attempt_at IS NULL OR sync_next_attempt_at <= :now);
 ```
 
-- [ ] Điều kiện CASH/PAID được kiểm tra cùng lock shipment và điều kiện claim trước commit; không dùng snippet SQL một mình thay cho kiểm tra tài chính.
-- [ ] Commit claim rồi gọi ShippingClient; kết quả ghi bằng transaction mới. Worker result có điều kiện attempt/start time để response cũ không ghi đè kết quả đối soát mới.
-- [ ] Install/test hai class. Xác minh bằng interceptor test rằng HTTP ngoài transaction, không thêm hook vào app. Commit `feat: synchronize eligible shipments with atomic claims`.
+- [x] Điều kiện CASH được kiểm tra trong cùng UPDATE giữ khóa hàng trước commit; VNPAY luôn bị từ chối khi chưa có payment xác minh. Nối điều kiện PAID vào claim tại Task 21, không dùng sync_status=PENDING thay cho kiểm tra tài chính.
+- [x] Commit claim rồi gọi ShippingClient; kết quả ghi bằng transaction mới. Worker result có điều kiện attempt/start time để response cũ không ghi đè kết quả đối soát mới.
+- [x] Install/test hai class và ShipmentSyncSchedulerTest. Xác minh bằng interceptor test cùng HTTP loopback thật rằng HTTP ngoài transaction và claim đã commit, không thêm hook vào app. Commit `feat: synchronize eligible shipments with atomic claims`.
+
+Ghi chú Task 15: chưa có payment schema tại Task 19 nên candidate/claim chỉ nhận CASH,
+kể cả VNPAY bị đổi nhầm sang PENDING cũng không gửi. Task 21 bắt buộc nối PAID đã xác
+minh vào cả candidate query và atomic claim. Không thêm bảng/migration sớm. Scheduler
+mặc định lô 10, fixed delay 10 giây, có thể tắt bằng SHIPMENT_SYNC_ENABLED. Kết quả
+không chắc chắn giữ UNKNOWN, auth/rejected giữ BLOCKED; không tự retry. PROCESSING bị
+gián đoạn, đối soát và backoff thuộc Task 16. Tham chiếu docs/references/shipment-synchronization.md.
 
 ## Task 16: Timeout, restart và retry an toàn
 
@@ -399,6 +406,7 @@ WHERE shipment_id = :id AND sync_status = 'PENDING'
 
 - [ ] RED cho chữ ký sai, ref/merchant/amount sai, duplicate callback, success rồi failure cũ, UNKNOWN query lại, Return URL giả success không ghi PAID.
 - [ ] IPN xác minh bằng signer rồi khóa shipment/payment theo thứ tự nhất quán, cập nhật PAID và WAITING_PAYMENT → PENDING nguyên tử; nếu cancellation CONFIRMED thì không gửi và chuyển xử lý refund Task 24.
+- [ ] Nối payment PAID đã xác minh vào ShipmentRepository candidate/claim và ShipmentSyncStateService (Task 15 hiện chặn toàn bộ VNPAY). Kiểm tra tài chính trong cùng khóa/transaction shipment; test VNPAY PAID gửi một lần, chưa PAID dù PENDING không gửi, PAID sau hủy không gửi. Không chỉ mở điều kiện sync_status rồi bỏ qua payment.
 - [ ] Response IPN đúng acknowledgement provider Task 18, phân biệt không hợp lệ và đã xử lý. Return handler chỉ redirect tới `/dashboard/payments/result` theo allowlist.
 - [ ] Scheduler query attempt chưa rõ, xác minh response rồi gọi cùng nghiệp vụ cập nhật như IPN; không mark EXPIRED từ đồng hồ local khi vẫn có khả năng đã thu.
 - [ ] Install/test hai class; two concurrent callbacks không tạo side effect trùng. Commit `feat: verify vnpay callbacks and reconcile payment results`.

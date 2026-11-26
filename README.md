@@ -13,13 +13,15 @@ Frontend hiện là trang khởi tạo, chưa có giao diện nghiệp vụ. Tas
 shipments/shipment_items, snapshot và dịch vụ tạo đơn chống trùng, xác minh lại phí.
 Task 13 đã có [API nội bộ tạo đơn tại quầy](docs/references/customer-counter-api.md)
 với xác thực service và quyền riêng. Task 14 đã có [API Customer tạo/list/detail](docs/references/customer-shipment-api.md),
-giới hạn quyền sở hữu và giữ snapshot khi Shipping lỗi. Thanh toán và scheduler
+giới hạn quyền sở hữu và giữ snapshot khi Shipping lỗi. Task 15 đã có
+[scheduler MySQL và atomic claim](docs/references/shipment-synchronization.md), gửi CASH
+và chặn VNPAY khi chưa có dữ liệu thanh toán xác minh. Phục hồi/đối soát và thanh toán
 còn ở các task tiếp theo.
 Task 10 đã có Interface/HTTP Adapter và mock
 server độc lập; giao thức mô phỏng chưa phải API Contract Go chính thức.
 Xem [bằng chứng checkpoint](docs/verification/2026-11-24-identity-checkpoint.md)
 và [cách gọi API xác thực](docs/references/customer-auth-api.md).
-Checkpoint mới nhất: [shipment API, 152 test trên Java/MySQL cục bộ](docs/verification/2026-11-26-shipment-ownership-checkpoint.md).
+Checkpoint mới nhất: [scheduler, 172 test trên Java/MySQL cục bộ](docs/verification/2026-11-26-shipment-sync-checkpoint.md).
 
 ## Yêu cầu môi trường
 
@@ -94,6 +96,10 @@ hiện tại, không in secret hoặc thực thi nội dung file. Có thể dùn
 Variables của IDE thay thế. Health: `/api/v1/public/health`.
 Mock tích hợp chạy bằng `python test/mock-server/server.py`; xem
 [hướng dẫn mô phỏng](test/mock-server/README.md). Không cần bật mock để chạy unit test.
+Scheduler mặc định xử lý tối đa 10 đơn CASH đến hạn mỗi lô; nghỉ 10 giây sau mỗi lô.
+SHIPMENT_SYNC_ENABLED=false tắt gửi tự động. UNKNOWN/BLOCKED không tự gửi lại;
+PROCESSING bị gián đoạn được xử lý tiếp tại Task 16. VNPAY chỉ được bật sau khi
+nối payment đã xác minh PAID tại Task 21.
 
 ## Kiểm thử
 
