@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import com.dcpost.customer.common.web.ApiProblems;
 import com.dcpost.customer.integration.common.IntegrationException;
 import com.dcpost.customer.shipment.service.ShipmentCreationException;
+import com.dcpost.customer.shipment.service.ShipmentQueryException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -15,6 +16,18 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler(ShipmentQueryException.class)
+    ProblemDetail shipmentQuery(ShipmentQueryException exception, HttpServletRequest request) {
+        var status = exception.code() == ShipmentQueryException.Code.SHIPMENT_NOT_FOUND
+                ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
+        var detail = switch (exception.code()) {
+            case SHIPMENT_NOT_FOUND -> "Không tìm thấy vận đơn";
+            case INVALID_SHIPMENT_QUERY -> "Tham số tìm kiếm hoặc phân trang không hợp lệ";
+            case FILTER_UNAVAILABLE -> "Bộ lọc này chưa khả dụng với dữ liệu tích hợp hiện tại";
+        };
+        return ApiProblems.create(request, status, exception.code().name(), detail);
+    }
+
     @ExceptionHandler(ShipmentCreationException.class)
     ProblemDetail shipmentCreation(ShipmentCreationException exception, HttpServletRequest request) {
         var status = switch (exception.code()) {

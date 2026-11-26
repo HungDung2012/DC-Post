@@ -14,7 +14,7 @@
 
 **Cập nhật bắt buộc ngày 24/11/2026:** Chủ dự án yêu cầu bỏ Docker khi code/test vì máy thiếu bộ nhớ. Không tự chạy Docker, build image hoặc khởi động container. Backend chạy trực tiếp bằng Java/Maven; Frontend bằng Vite; dùng MySQL đã cài trên máy. `mvn test` chỉ chạy test nghiệp vụ/HTTP không cần database; profile `integration` chạy riêng khi MySQL test cục bộ đã cấu hình. Maven và JVM test giới hạn heap 256 MB, 2 CPU; thực hiện tuần tự. Các bằng chứng Docker ở checkpoint trước chỉ là lịch sử, không phải hướng dẫn tiếp tục.
 
-Ngày lập: 24/11/2026. Design và implementation plan đã được chủ dự án duyệt; đang triển khai. Tasks 01–13 đã được triển khai và review; Tasks 14–34 chưa triển khai. Checkpoint Task 13 ngày 26/11/2026 đã xác minh 136 test (82 test nghiệp vụ/HTTP và 54 test MySQL cục bộ), không Docker. Bằng chứng tại `docs/verification/2026-11-26-counter-shipment-checkpoint.md`; các checkpoint trước giữ làm lịch sử. Các snippet dưới đây là hướng dẫn, không thay thế source và báo cáo kiểm thử thực tế.
+Ngày lập: 24/11/2026. Design và implementation plan đã được chủ dự án duyệt; đang triển khai. Tasks 01–14 đã được triển khai và review; Tasks 15–34 chưa triển khai. Checkpoint Task 14 ngày 26/11/2026 đã xác minh 152 test (85 test nghiệp vụ/HTTP và 67 test MySQL cục bộ), không Docker. Bằng chứng tại `docs/verification/2026-11-26-shipment-ownership-checkpoint.md`; các checkpoint trước giữ làm lịch sử. Các snippet dưới đây là hướng dẫn, không thay thế source và báo cáo kiểm thử thực tế.
 
 Nguồn: `PROJECT_SPEC.md` và `docs/superpowers/specs/2026-11-24-customer-service-design.md`. Không thay đổi nghiệp vụ đã thống nhất. Không thêm bảng, role, service hoặc framework kiểm thử Frontend.
 
@@ -310,11 +310,17 @@ Ghi chú triển khai: dùng JPA ManyToMany/JoinTable cho user_roles, giữ nguy
 
 **Files:** Create `customer-service/src/main/java/com/dcpost/customer/shipment/service/ShipmentQueryService.java`, `customer-service/src/main/java/com/dcpost/customer/shipment/controller/ShipmentController.java`, `customer-service/src/main/java/com/dcpost/customer/shipment/dto/ShipmentDetailResponse.java`, `test/backend/src/test/java/com/dcpost/customer/shipment/ShipmentOwnershipIT.java`.
 
-- [ ] RED với hai customer: list chỉ chứa đơn mình, ID của người khác trả 404, search recipient chỉ trong customer scope, phân trang/sort ổn định khi thời gian trùng.
-- [ ] Tạo `GET /api/v1/customer/shipments`, `GET /api/v1/customer/shipments/{id}` và `POST /api/v1/customer/shipments`; không PUT/PATCH/DELETE shipment.
-- [ ] Query pagination giới hạn page size, sort created_at/shipment_id; lọc payment method/status bằng dữ liệu local. Detail tổng hợp phần bên ngoài riêng: API lỗi không làm mất dữ liệu gốc đã đọc.
-- [ ] Nếu trạng thái ngoài không có batch/filter capability thì không bật bộ lọc đó; không lọc sau khi phân trang local. Trả capability rõ ràng cho Frontend.
-- [ ] Install/test `ShipmentOwnershipIT`; kiểm tra request không thể override customer_id. Commit `feat: query shipments within customer ownership`.
+- [x] RED với hai customer: list chỉ chứa đơn mình, ID của người khác trả 404, search recipient chỉ trong customer scope, phân trang/sort ổn định khi thời gian trùng.
+- [x] Tạo `GET /api/v1/customer/shipments`, `GET /api/v1/customer/shipments/{id}` và `POST /api/v1/customer/shipments`; không PUT/PATCH/DELETE shipment.
+- [x] Query pagination giới hạn page size, sort created_at/shipment_id; lọc payment method và syncStatus bằng dữ liệu local. Detail tổng hợp phần bên ngoài riêng: API lỗi không làm mất dữ liệu gốc đã đọc.
+- [x] Nếu trạng thái ngoài không có batch/filter capability thì không bật bộ lọc đó; không lọc sau khi phân trang local. Trả capability rõ ràng cho Frontend.
+- [x] Install/test `ShipmentOwnershipIT`; kiểm tra request không thể override customer_id. Commit `feat: query shipments within customer ownership`.
+
+Ghi chú Task 14: chưa có payment schema tại thời điểm này, nên paymentStatusFilter=false;
+truyền paymentStatus nhận 400 FILTER_UNAVAILABLE, không suy ra trạng thái tài chính từ
+syncStatus. Hoàn thiện bộ lọc bằng dữ liệu payment local sau Tasks 19–24. Shipping chưa
+có batch/filter nên shippingStatusFilter=false. Không thêm bảng/migration. Bổ sung
+ShipmentQueryServiceTest kiểm tra phạm vi ngày MySQL và tracking sai cấu trúc.
 
 ## Task 15: Scheduler gửi đơn và atomic claim
 
